@@ -91,10 +91,7 @@ function CollaborativeCanvas() {
     selectedTemplate,
     setSelectedTemplate,
     setAIPanelOpen,
-    aiCanvasPosition,
     setAICanvasPosition,
-    pendingStickyNotes,
-    clearPendingStickyNotes,
   } = useWhiteboardStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
@@ -317,25 +314,7 @@ function CollaborativeCanvas() {
     ],
   );
 
-  // Handle pending sticky notes from AI
-  useEffect(() => {
-    if (pendingStickyNotes.length > 0) {
-      const newNodes: Node[] = pendingStickyNotes.map((note, index) => ({
-        id: getNextNodeId(),
-        type: "sticky",
-        position: {
-          x: note.position.x + (index % 2) * 220,
-          y: note.position.y + Math.floor(index / 2) * 220,
-        },
-        data: { text: note.text, color: note.color },
-        style: { width: 200, height: 200 },
-      }));
-
-      reactFlowInstance.addNodes(newNodes);
-      clearPendingStickyNotes();
-      console.log("🤖 Added AI sticky notes:", newNodes.length);
-    }
-  }, [pendingStickyNotes, getNextNodeId, reactFlowInstance, clearPendingStickyNotes]);
+  // Handle pending sticky notes from AI — removed, AISidebar now uses addNodes directly
 
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>

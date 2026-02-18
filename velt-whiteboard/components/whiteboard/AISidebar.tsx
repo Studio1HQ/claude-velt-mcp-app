@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWhiteboardStore } from "@/lib/store/whiteboard-store";
 import {
   X,
@@ -11,20 +11,21 @@ import {
   FolderTree,
   FileText,
   TrendingUp,
-  Layers,
   Heart,
+  Layers,
 } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import {
-  generateBrainstormIdeas,
-  organizeStickyNotes,
+  processCanvasCommand,
   summarizeCanvas,
   suggestNextSteps,
-  askQuestion,
-  groupBySentiment,
   generateTemplateFromCanvas,
-  generateStickyNotes,
 } from "@/lib/ai/ai-helpers";
+import {
+  buildNodesFromActions,
+  applyColorUpdates,
+  type CanvasAction,
+} from "@/lib/ai/canvas-actions";
 
 type AIFeature =
   | "chat"
@@ -35,6 +36,64 @@ type AIFeature =
   | "sentiment"
   | "create-template";
 
+const FEATURES = [
+  {
+    id: "chat" as AIFeature,
+    name: "Ask AI",
+    icon: Sparkles,
+    description: "Chat & add anything to canvas",
+  },
+  {
+    id: "brainstorm" as AIFeature,
+    name: "Brainstorm",
+    icon: Lightbulb,
+    description: "Generate ideas as sticky notes",
+  },
+  {
+    id: "organize" as AIFeature,
+    name: "Organize",
+    icon: FolderTree,
+    description: "Group & color-code notes",
+  },
+  {
+    id: "summarize" as AIFeature,
+    name: "Summarize",
+    icon: FileText,
+    description: "Summarize canvas content",
+  },
+  {
+    id: "next-steps" as AIFeature,
+    name: "Next Steps",
+    icon: TrendingUp,
+    description: "Suggest next actions",
+  },
+  {
+    id: "sentiment" as AIFeature,
+    name: "Sentiment",
+    icon: Heart,
+    description: "Color-code by sentiment",
+  },
+  {
+    id: "create-template" as AIFeature,
+    name: "Template",
+    icon: Layers,
+    description: "Name this canvas layout",
+  },
+];
+
+function ChatMessage({ role, content }: { role: string; content: string }) {
+  return (
+    <div
+      className={`p-3 rounded-lg text-sm ${role === "user" ? "bg-blue-50 ml-6" : "bg-gray-100 mr-6"}`}
+    >
+      <div className="text-xs font-medium text-gray-500 mb-1">
+        {role === "user" ? "You" : "AI"}
+      </div>
+      <div className="whitespace-pre-wrap leading-relaxed">{content}</div>
+    </div>
+  );
+}
+
 export default function AISidebar() {
   const {
     isAIPanelOpen,
@@ -42,421 +101,276 @@ export default function AISidebar() {
     aiMessages,
     addAIMessage,
     aiCanvasPosition,
-    addPendingStickyNotes,
+    getNextNodeId,
   } = useWhiteboardStore();
-  const { getNodes, addNodes, getNode, setNodes } = useReactFlow();
+  const { getNodes, getEdges, addNodes, setNodes } = useReactFlow();
   const [selectedFeature, setSelectedFeature] = useState<AIFeature>("chat");
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [aiMessages, isLoading]);
 
   if (!isAIPanelOpen) return null;
 
-  const handleClose = () => {
-    setAIPanelOpen(false);
+  /** Execute canvas actions directly — no store roundtrip, renders immediately */
+  const executeActions = (actions: CanvasAction[]) => {
+    const addActions = actions.filter((a) => a.type !== "update_color");
+    if (addActions.length > 0) {
+      const newNodes = buildNodesFromActions(
+        addActions,
+        aiCanvasPosition,
+        getNextNodeId,
+      );
+      if (newNodes.length > 0) addNodes(newNodes);
+    }
+    const colorUpdated = applyColorUpdates(getNodes(), actions);
+    if (colorUpdated) setNodes(colorUpdated);
+  };
+
+  const runCommand = async (prompt: string, userLabel?: string) => {
+    setIsLoading(true);
+    addAIMessage({ role: "user", content: userLabel || prompt });
+
+    const result = await processCanvasCommand(prompt, getNodes(), getEdges());
+
+    if (result.error) {
+      addAIMessage({
+        role: "assistant",
+        content: `Something went wrong. Please try again.`,
+      });
+    } else {
+      if (result.actions.length > 0) executeActions(result.actions);
+      if (result.message)
+        addAIMessage({ role: "assistant", content: result.message });
+    }
+    setIsLoading(false);
+  };
+
+  const handleChat = () => {
+    if (!inputValue.trim() || isLoading) return;
+    const prompt = inputValue.trim();
     setInputValue("");
+    runCommand(prompt);
   };
 
-  const handleBrainstorm = async () => {
-    if (!inputValue.trim()) return;
-
-    setIsLoading(true);
-    addAIMessage({
-      role: "user",
-      content: `Generate ideas for: ${inputValue}`,
-    });
-
-    try {
-      // Use the new generateStickyNotes function with colors
-      const notes = await generateStickyNotes(inputValue, 4);
-
-      if (notes.length > 0) {
-        // Add sticky notes to pending queue (will be placed at last click position)
-        addPendingStickyNotes(notes, aiCanvasPosition);
-        addAIMessage({
-          role: "assistant",
-          content: `✅ Generated ${notes.length} colored sticky notes at position (${Math.round(aiCanvasPosition.x)}, ${Math.round(aiCanvasPosition.y)})! You can drag them to reposition.`,
-        });
-      } else {
-        // Fallback to old behavior
-        const ideas = await generateBrainstormIdeas(inputValue);
-        const nodes = getNodes();
-        const startX = aiCanvasPosition.x;
-        const startY = aiCanvasPosition.y;
-
-        const newNodes = ideas.map((idea, index) => ({
-          id: `sticky-${Date.now()}-${index}`,
-          type: "sticky",
-          position: {
-            x: startX + (index % 4) * 220,
-            y: startY + Math.floor(index / 4) * 220,
-          },
-          data: { text: idea, color: "#fef08a" },
-          style: { width: 200, height: 200 },
-        }));
-
-        addNodes(newNodes);
-        addAIMessage({
-          role: "assistant",
-          content: `✅ Generated ${ideas.length} brainstorm ideas and added them to canvas!`,
-        });
-      }
-      setInputValue("");
-    } catch (error: any) {
-      addAIMessage({
-        role: "assistant",
-        content: `❌ Error: ${error.message}`,
-      });
-    }
-    setIsLoading(false);
+  const handleBrainstorm = () => {
+    if (!inputValue.trim() || isLoading) return;
+    const topic = inputValue.trim();
+    setInputValue("");
+    runCommand(
+      `Generate 6 brainstorming sticky notes about: "${topic}". Use different colors to categorize them by type or theme.`,
+      `Brainstorm: ${topic}`,
+    );
   };
 
-  const handleOrganize = async () => {
-    setIsLoading(true);
-    addAIMessage({
-      role: "user",
-      content: "Organize sticky notes by category",
-    });
-
-    try {
-      const nodes = getNodes();
-      const result = await organizeStickyNotes(nodes);
-
-      if (result.categories.length === 0) {
-        addAIMessage({
-          role: "assistant",
-          content: "No sticky notes found to organize.",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Display categories
-      let summary = `📋 Organized into ${result.categories.length} categories:\n\n`;
-      result.categories.forEach((cat) => {
-        summary += `**${cat.name}** (${cat.items.length} notes)\n`;
-      });
-
-      addAIMessage({ role: "assistant", content: summary });
-
-      // Move sticky notes into groups
-      const allNodes = getNodes();
-      result.categories.forEach((category, catIndex) => {
-        category.items.forEach((nodeId, itemIndex) => {
-          const node = allNodes.find((n) => n.id === nodeId);
-          if (node) {
-            node.position = {
-              x: 100 + catIndex * 500,
-              y: 100 + itemIndex * 220,
-            };
-          }
-        });
-      });
-
-      setNodes(allNodes);
-    } catch (error: any) {
+  const handleOrganize = () => {
+    const stickies = getNodes().filter((n) => n.type === "sticky");
+    if (!stickies.length) {
       addAIMessage({
         role: "assistant",
-        content: `❌ Error: ${error.message}`,
+        content: "No sticky notes found to organize.",
       });
+      return;
     }
-    setIsLoading(false);
+    runCommand(
+      "Group all the sticky notes on this canvas into logical categories. Use update_color actions to color-code each group with a distinct color. Explain the groupings briefly.",
+      "Organize sticky notes",
+    );
   };
 
   const handleSummarize = async () => {
+    if (isLoading) return;
     setIsLoading(true);
-    addAIMessage({ role: "user", content: "Summarize canvas content" });
-
-    try {
-      const nodes = getNodes();
-      const summary = await summarizeCanvas(nodes);
-      addAIMessage({ role: "assistant", content: summary });
-    } catch (error: any) {
-      addAIMessage({
-        role: "assistant",
-        content: `❌ Error: ${error.message}`,
-      });
-    }
+    addAIMessage({ role: "user", content: "Summarize canvas" });
+    const summary = await summarizeCanvas(getNodes(), getEdges());
+    addAIMessage({ role: "assistant", content: summary });
     setIsLoading(false);
   };
 
   const handleNextSteps = async () => {
+    if (isLoading) return;
     setIsLoading(true);
     addAIMessage({ role: "user", content: "Suggest next steps" });
-
-    try {
-      const nodes = getNodes();
-      const steps = await suggestNextSteps(nodes);
-
-      const stepsList = steps.map((step, i) => `${i + 1}. ${step}`).join("\n");
-      addAIMessage({
-        role: "assistant",
-        content: `🎯 Suggested Next Steps:\n\n${stepsList}`,
-      });
-    } catch (error: any) {
-      addAIMessage({
-        role: "assistant",
-        content: `❌ Error: ${error.message}`,
-      });
-    }
+    const steps = await suggestNextSteps(getNodes(), getEdges());
+    addAIMessage({ role: "assistant", content: steps });
     setIsLoading(false);
   };
 
-  const handleSentiment = async () => {
-    setIsLoading(true);
-    addAIMessage({ role: "user", content: "Analyze sentiment" });
-
-    try {
-      const nodes = getNodes();
-      const sentiment = await groupBySentiment(nodes);
-
-      let report = "📊 Sentiment Analysis:\n\n";
-      report += `✅ Positive: ${sentiment.positive.length} notes\n`;
-      report += `❌ Negative: ${sentiment.negative.length} notes\n`;
-      report += `➖ Neutral: ${sentiment.neutral.length} notes\n`;
-      report += `⚠️ Concerns: ${sentiment.concerns.length} notes`;
-
-      addAIMessage({ role: "assistant", content: report });
-    } catch (error: any) {
+  const handleSentiment = () => {
+    const stickies = getNodes().filter((n) => n.type === "sticky");
+    if (!stickies.length) {
       addAIMessage({
         role: "assistant",
-        content: `❌ Error: ${error.message}`,
+        content: "No sticky notes found to analyze.",
       });
+      return;
     }
-    setIsLoading(false);
+    runCommand(
+      "Analyze the sentiment of all sticky notes on this canvas. Color-code them with update_color actions: green (#bbf7d0) for positive, pink (#fbcfe8) for negative, blue (#bfdbfe) for neutral, orange (#fed7aa) for concerns. Report the counts in your message.",
+      "Analyze sentiment",
+    );
   };
 
   const handleCreateTemplate = async () => {
+    if (isLoading) return;
     setIsLoading(true);
-    addAIMessage({ role: "user", content: "Create template from canvas" });
-
-    try {
-      const nodes = getNodes();
-      const template = await generateTemplateFromCanvas(nodes);
-
-      addAIMessage({
-        role: "assistant",
-        content: `📐 Template Created!\n\n**Name:** ${template.name}\n**Description:** ${template.description}\n\nYou can save this as a custom template.`,
-      });
-    } catch (error: any) {
-      addAIMessage({
-        role: "assistant",
-        content: `❌ Error: ${error.message}`,
-      });
-    }
+    addAIMessage({ role: "user", content: "Identify canvas template" });
+    const info = await generateTemplateFromCanvas(getNodes(), getEdges());
+    addAIMessage({ role: "assistant", content: info });
     setIsLoading(false);
   };
 
-  const handleChat = async () => {
-    if (!inputValue.trim()) return;
-
-    setIsLoading(true);
-    addAIMessage({ role: "user", content: inputValue });
-
-    try {
-      const nodes = getNodes();
-      const response = await askQuestion(inputValue, nodes);
-      addAIMessage({ role: "assistant", content: response });
-      setInputValue("");
-    } catch (error: any) {
-      addAIMessage({
-        role: "assistant",
-        content: `❌ Error: ${error.message}`,
-      });
-    }
-    setIsLoading(false);
-  };
-
-  const handleSubmit = () => {
-    if (selectedFeature === "chat") {
-      handleChat();
-    } else if (selectedFeature === "brainstorm") {
-      handleBrainstorm();
+  const handleFeatureAction = () => {
+    switch (selectedFeature) {
+      case "chat":
+        handleChat();
+        break;
+      case "brainstorm":
+        handleBrainstorm();
+        break;
+      case "organize":
+        handleOrganize();
+        break;
+      case "summarize":
+        handleSummarize();
+        break;
+      case "next-steps":
+        handleNextSteps();
+        break;
+      case "sentiment":
+        handleSentiment();
+        break;
+      case "create-template":
+        handleCreateTemplate();
+        break;
     }
   };
 
-  const features = [
-    {
-      id: "chat" as AIFeature,
-      name: "Ask AI",
-      icon: Sparkles,
-      description: "Ask questions about your canvas",
-    },
-    {
-      id: "brainstorm" as AIFeature,
-      name: "Brainstorm",
-      icon: Lightbulb,
-      description: "Generate creative ideas",
-    },
-    {
-      id: "organize" as AIFeature,
-      name: "Organize",
-      icon: FolderTree,
-      description: "Auto-organize notes",
-    },
-    {
-      id: "summarize" as AIFeature,
-      name: "Summarize",
-      icon: FileText,
-      description: "Summarize content",
-    },
-    {
-      id: "next-steps" as AIFeature,
-      name: "Next Steps",
-      icon: TrendingUp,
-      description: "Suggest actions",
-    },
-    // {
-    //   id: "sentiment" as AIFeature,
-    //   name: "Sentiment",
-    //   icon: Heart,
-    //   description: "Analyze sentiment",
-    // },
-    // {
-    //   id: "create-template" as AIFeature,
-    //   name: "Template",
-    //   icon: Layers,
-    //   description: "Create template",
-    // },
-  ];
+  const needsInput =
+    selectedFeature === "chat" || selectedFeature === "brainstorm";
 
   return (
-    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200 rounded-[12px]">
+    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
       {/* Header */}
-      <div className="p-4 bg-gradient-to-r from-red-600 to-pink-600 text-white flex items-center justify-between rounded-[12px]">
+      <div className="p-4 bg-linear-to-r from-purple-600 to-blue-600 text-white flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5" />
           <h2 className="font-bold text-lg">AI Assistant</h2>
         </div>
         <button
-          onClick={handleClose}
+          onClick={() => setAIPanelOpen(false)}
           className="p-1 hover:bg-white/20 rounded transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Features Grid */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <div className="grid grid-cols-2 gap-2">
-          {features.map((feature) => {
-            const Icon = feature.icon;
-            const isActive = selectedFeature === feature.id;
-            return (
-              <button
-                key={feature.id}
-                onClick={() => setSelectedFeature(feature.id)}
-                className={`p-3 rounded-lg border-2 transition-all text-left ${
-                  isActive
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200 bg-white hover:border-purple-300"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon
-                    className={`w-4 h-4 ${isActive ? "text-purple-600" : "text-gray-600"}`}
-                  />
-                  <span
-                    className={`text-sm font-semibold ${isActive ? "text-purple-700" : "text-gray-700"}`}
-                  >
-                    {feature.name}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">{feature.description}</p>
-              </button>
-            );
-          })}
+      {/* Feature Grid */}
+      <div className="p-3 border-b border-gray-200 bg-gray-50 shrink-0">
+        <div className="grid grid-cols-2 gap-1.5">
+          {FEATURES.map(({ id, name, icon: Icon, description }) => (
+            <button
+              key={id}
+              onClick={() => setSelectedFeature(id)}
+              className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                selectedFeature === id
+                  ? "border-purple-500 bg-purple-50"
+                  : "border-gray-200 bg-white hover:border-purple-300"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Icon
+                  className={`w-3.5 h-3.5 ${selectedFeature === id ? "text-purple-600" : "text-gray-500"}`}
+                />
+                <span
+                  className={`text-xs font-semibold ${selectedFeature === id ? "text-purple-700" : "text-gray-700"}`}
+                >
+                  {name}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-tight">
+                {description}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {aiMessages.length === 0 && (
-          <div className="text-center py-8">
-            <Sparkles className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-            <p className="text-gray-500 text-sm">
-              Select a feature above to get started
+          <div className="text-center py-12">
+            <Sparkles className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-400 text-sm">
+              Select a feature or type in Ask AI
+            </p>
+            <p className="text-gray-300 text-xs mt-1">
+              e.g. "add 3 sticky notes about marketing"
             </p>
           </div>
         )}
-
         {aiMessages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`p-3 rounded-lg ${
-              msg.role === "user" ? "bg-blue-100 ml-8" : "bg-gray-100 mr-8"
-            }`}
-          >
-            <div className="text-xs text-gray-500 mb-1">
-              {msg.role === "user" ? "You" : "AI Assistant"}
-            </div>
-            <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
-          </div>
+          <ChatMessage key={msg.id} role={msg.role} content={msg.content} />
         ))}
-
         {isLoading && (
-          <div className="flex items-center gap-2 text-gray-500 bg-gray-100 p-3 rounded-lg mr-8">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">AI is thinking...</span>
+          <div className="flex items-center gap-2 text-gray-500 bg-gray-100 p-3 rounded-lg mr-6">
+            <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+            <span className="text-sm">Thinking...</span>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      {(selectedFeature === "chat" || selectedFeature === "brainstorm") && (
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+      {/* Input / Action */}
+      <div className="p-3 border-t border-gray-200 bg-gray-50 shrink-0">
+        {needsInput ? (
           <div className="flex gap-2">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) =>
-                e.key === "Enter" && !isLoading && handleSubmit()
+                e.key === "Enter" && !e.shiftKey && handleFeatureAction()
               }
               placeholder={
                 selectedFeature === "brainstorm"
-                  ? "Enter topic for brainstorming..."
-                  : "Ask a question about your canvas..."
+                  ? "Enter topic..."
+                  : "add 2 sticky notes, add triangle, add kanban..."
               }
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
               disabled={isLoading}
             />
             <button
-              onClick={handleSubmit}
+              onClick={handleFeatureAction}
               disabled={isLoading || !inputValue.trim()}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-40 transition-colors"
             >
-              <Send className="w-4 h-4" />
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Action Button for other features */}
-      {selectedFeature !== "chat" && selectedFeature !== "brainstorm" && (
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+        ) : (
           <button
-            onClick={() => {
-              if (selectedFeature === "organize") handleOrganize();
-              else if (selectedFeature === "summarize") handleSummarize();
-              else if (selectedFeature === "next-steps") handleNextSteps();
-              else if (selectedFeature === "sentiment") handleSentiment();
-              else if (selectedFeature === "create-template")
-                handleCreateTemplate();
-            }}
+            onClick={handleFeatureAction}
             disabled={isLoading}
-            className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+            className="w-full py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
           >
             {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Processing...
-              </span>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Running...
+              </>
             ) : (
-              `Run ${features.find((f) => f.id === selectedFeature)?.name}`
+              `Run ${FEATURES.find((f) => f.id === selectedFeature)?.name}`
             )}
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

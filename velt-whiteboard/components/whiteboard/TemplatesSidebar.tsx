@@ -68,7 +68,7 @@ export function TemplatesSidebar() {
       </div>
 
       {/* Instructions */}
-      <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100">
+      <div className="p-4 bg-linear-to-r from-purple-50 to-blue-50 border-b border-purple-100">
         <p className="text-sm text-purple-900">
           <strong>Click</strong> a template, then{" "}
           <strong>click on canvas</strong> to place it
@@ -98,7 +98,7 @@ export function TemplatesSidebar() {
                     className={`p-2 rounded-lg ${
                       isSelected
                         ? "bg-purple-500"
-                        : "bg-gradient-to-br from-purple-500 to-blue-500"
+                        : "bg-linear-to-br from-purple-500 to-blue-500"
                     }`}
                   >
                     <Icon className="h-6 w-6 text-white" />

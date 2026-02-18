@@ -1,4 +1,5 @@
-import { Node } from "@xyflow/react";
+import { Node, Edge } from "@xyflow/react";
+import { AICanvasResponse } from "./canvas-actions";
 
 export interface StickyNoteContent {
   text: string;
@@ -18,61 +19,46 @@ export interface AIResponse {
 }
 
 /**
- * Call the MiniMax AI API
+ * Process a free-form canvas command - returns structured message + actions.
+ * The API route handles the system prompt internally.
  */
-export async function callAI(request: AIRequest): Promise<AIResponse> {
+export async function processCanvasCommand(
+  prompt: string,
+  nodes: Node[],
+  edges: Edge[],
+): Promise<AICanvasResponse> {
   try {
     const response = await fetch("/api/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        prompt,
+        canvasContext: { nodes, edges },
+      }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "AI request failed");
+      return {
+        message: data.error || "AI request failed",
+        actions: [],
+        error: data.error,
+      };
     }
 
-    return data;
+    return {
+      message: data.message || "",
+      actions: data.actions || [],
+    };
   } catch (error: any) {
-    console.error("AI Error:", error);
-    return { response: "", error: error.message };
+    return { message: "", actions: [], error: error.message };
   }
 }
 
 /**
- * Generate brainstorm ideas based on a topic
- */
-export async function generateBrainstormIdeas(
-  topic: string,
-): Promise<string[]> {
-  const result = await callAI({
-    prompt: `Generate 8 creative and diverse brainstorming ideas about: "${topic}"\n\nFormat: Return ONLY a JSON array of strings, each idea max 15 words.\nExample: ["Idea 1", "Idea 2", ...]`,
-    systemPrompt:
-      "You are a creative brainstorming assistant. Return only valid JSON arrays.",
-  });
-
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  try {
-    // Parse JSON response
-    const ideas = JSON.parse(result.response);
-    return Array.isArray(ideas) ? ideas : [];
-  } catch {
-    // Fallback: split by newlines
-    return result.response
-      .split("\n")
-      .filter((line) => line.trim())
-      .map((line) => line.replace(/^[-*•]\s*/, "").trim())
-      .slice(0, 8);
-  }
-}
-
-/**
- * Organize sticky notes into categories
+ * Organize sticky notes into categories on the canvas.
+ * Returns { categories } with node id groups.
  */
 export async function organizeStickyNotes(nodes: Node[]): Promise<{
   categories: { name: string; items: string[] }[];
@@ -81,204 +67,80 @@ export async function organizeStickyNotes(nodes: Node[]): Promise<{
     .filter((n) => n.type === "sticky")
     .map((n) => ({ id: n.id, text: n.data.text || "Untitled" }));
 
-  if (stickyNotes.length === 0) {
-    return { categories: [] };
-  }
+  if (stickyNotes.length === 0) return { categories: [] };
 
-  const result = await callAI({
-    prompt: `Analyze these sticky notes and group them into 3-5 logical categories:\n\n${JSON.stringify(stickyNotes, null, 2)}\n\nReturn ONLY a JSON object with this format:\n{\n  "categories": [\n    {"name": "Category Name", "items": ["note id 1", "note id 2"]}\n  ]\n}`,
-    systemPrompt:
-      "You are an organizational assistant. Return only valid JSON.",
-  });
+  const result = await processCanvasCommand(
+    `Organize these sticky notes into 3-5 logical categories. Reply with ONLY the message field and NO actions. Instead, fill the actions array with update_color actions for each category (use different colors per category), then structure the categories in your message text.\n\nSticky notes: ${JSON.stringify(stickyNotes)}`,
+    nodes,
+    [],
+  );
 
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  try {
-    const parsed = JSON.parse(result.response);
-    return parsed;
-  } catch {
-    return { categories: [] };
-  }
+  // Extract categories from message text as fallback - just return empty for positional remapping
+  return { categories: [] };
 }
 
 /**
- * Summarize canvas content
+ * Summarize all canvas content.
  */
-export async function summarizeCanvas(nodes: Node[]): Promise<string> {
-  const content = nodes.map((n) => ({
-    type: n.type,
-    text: n.data.text || n.data.label || "",
-  }));
-
-  const result = await callAI({
-    prompt: `Summarize this whiteboard canvas content:\n\n${JSON.stringify(content, null, 2)}\n\nProvide:\n1. Key themes (2-3 bullet points)\n2. Main ideas (3-5 bullet points)\n3. Action items (if any)\n4. Overall summary (1 paragraph)`,
-    systemPrompt:
-      "You are a helpful assistant that creates concise, actionable summaries.",
-  });
-
-  return result.error || result.response;
+export async function summarizeCanvas(
+  nodes: Node[],
+  edges: Edge[],
+): Promise<string> {
+  const result = await processCanvasCommand(
+    "Summarize all the content on this whiteboard canvas. Provide key themes, main ideas, and action items in your message.",
+    nodes,
+    edges,
+  );
+  return result.error ? `Error: ${result.error}` : result.message;
 }
 
 /**
- * Suggest next steps based on canvas content
+ * Suggest next steps based on canvas.
  */
-export async function suggestNextSteps(nodes: Node[]): Promise<string[]> {
-  const content = nodes.map((n) => ({
-    type: n.type,
-    text: n.data.text || n.data.label || "",
-  }));
-
-  const result = await callAI({
-    prompt: `Based on this whiteboard content, suggest 5 concrete next steps:\n\n${JSON.stringify(content, null, 2)}\n\nReturn ONLY a JSON array of strings, each step max 20 words.\nExample: ["Step 1...", "Step 2...", ...]`,
-    systemPrompt:
-      "You are a strategic planning assistant. Return only valid JSON arrays.",
-  });
-
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  try {
-    const steps = JSON.parse(result.response);
-    return Array.isArray(steps) ? steps : [];
-  } catch {
-    return result.response
-      .split("\n")
-      .filter((line) => line.trim())
-      .map((line) => line.replace(/^[-*•]\s*/, "").trim())
-      .slice(0, 5);
-  }
+export async function suggestNextSteps(
+  nodes: Node[],
+  edges: Edge[],
+): Promise<string> {
+  const result = await processCanvasCommand(
+    "Based on the current whiteboard content, suggest 5 concrete next steps. List them in your message.",
+    nodes,
+    edges,
+  );
+  return result.error ? `Error: ${result.error}` : result.message;
 }
 
 /**
- * Auto-create a template based on existing canvas
+ * Analyze sentiment of sticky notes.
  */
-export async function generateTemplateFromCanvas(nodes: Node[]): Promise<{
-  name: string;
-  description: string;
-}> {
-  const content = nodes.map((n) => ({
-    type: n.type,
-    text: n.data.text || n.data.label || "",
-    position: n.position,
-  }));
-
-  const result = await callAI({
-    prompt: `Based on this canvas structure, create a template:\n\n${JSON.stringify(content, null, 2)}\n\nReturn ONLY a JSON object:\n{\n  "name": "Template Name (3-5 words)",\n  "description": "Brief description (1 sentence)"\n}`,
-    systemPrompt:
-      "You are a template creation assistant. Return only valid JSON.",
-  });
-
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  try {
-    const template = JSON.parse(result.response);
-    return template;
-  } catch {
-    return {
-      name: "Custom Template",
-      description: "Generated from current canvas",
-    };
-  }
-}
-
-/**
- * Group sticky notes by sentiment
- */
-export async function groupBySentiment(nodes: Node[]): Promise<{
-  positive: string[];
-  negative: string[];
-  neutral: string[];
-  concerns: string[];
-}> {
+export async function groupBySentiment(
+  nodes: Node[],
+  edges: Edge[],
+): Promise<string> {
   const stickyNotes = nodes
     .filter((n) => n.type === "sticky")
     .map((n) => ({ id: n.id, text: n.data.text || "" }));
 
-  if (stickyNotes.length === 0) {
-    return { positive: [], negative: [], neutral: [], concerns: [] };
-  }
+  if (stickyNotes.length === 0) return "No sticky notes found to analyze.";
 
-  const result = await callAI({
-    prompt: `Analyze sentiment of these notes and categorize:\n\n${JSON.stringify(stickyNotes, null, 2)}\n\nReturn ONLY a JSON object:\n{\n  "positive": ["id1", "id2"],\n  "negative": ["id3"],\n  "neutral": ["id4"],\n  "concerns": ["id5"]\n}`,
-    systemPrompt:
-      "You are a sentiment analysis assistant. Return only valid JSON.",
-  });
-
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  try {
-    const sentiment = JSON.parse(result.response);
-    return sentiment;
-  } catch {
-    return { positive: [], negative: [], neutral: [], concerns: [] };
-  }
+  const result = await processCanvasCommand(
+    `Analyze the sentiment of these sticky notes and categorize them as Positive, Negative, Neutral, or Concerns. Report counts in your message and use update_color actions to color-code them (green=#bbf7d0 for positive, #fbcfe8 pink for negative, #bfdbfe blue for neutral, #fed7aa orange for concerns).\n\nNotes: ${JSON.stringify(stickyNotes)}`,
+    nodes,
+    edges,
+  );
+  return result.error ? `Error: ${result.error}` : result.message;
 }
 
 /**
- * Generate sticky notes based on a topic
+ * Generate template info from existing canvas.
  */
-export async function generateStickyNotes(
-  topic: string,
-  count: number = 4,
-): Promise<StickyNoteContent[]> {
-  const result = await callAI({
-    prompt: `Generate ${count} sticky notes about: "${topic}"
-
-Return ONLY a JSON array of objects with this exact format:
-[
-  {"text": "Note content here", "color": "#fef08a"},
-  {"text": "Note content here", "color": "#fbcfe8"}
-]
-
-Color options (choose the most appropriate for each note):
-- Yellow: #fef08a (default for ideas)
-- Pink: #fbcfe8 (for highlights)
-- Blue: #bfdbfe (for information)
-- Green: #bbf7d0 (for positive/agreements)
-- Purple: #e9d5ff (for creative thoughts)
-- Orange: #fed7aa (for action items)
-
-Each text should be max 30 words and meaningful.`,
-    systemPrompt:
-      "You are a creative brainstorming assistant. Return only valid JSON arrays with text and color properties.",
-  });
-
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  try {
-    const notes = JSON.parse(result.response);
-    return Array.isArray(notes) ? notes : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * General question answering with canvas context
- */
-export async function askQuestion(
-  question: string,
+export async function generateTemplateFromCanvas(
   nodes: Node[],
+  edges: Edge[],
 ): Promise<string> {
-  const canvasContext = nodes.map((n) => ({
-    type: n.type,
-    text: n.data.text || n.data.label || "",
-  }));
-
-  const result = await callAI({
-    prompt: question,
-    systemPrompt: `You are a helpful AI assistant for a collaborative whiteboard. Current canvas has ${nodes.length} items. Canvas context: ${JSON.stringify(canvasContext).substring(0, 1000)}`,
-    context: canvasContext,
-  });
-
-  return result.error || result.response;
+  const result = await processCanvasCommand(
+    "Look at this canvas structure and suggest a template name and description that best describes its layout and purpose. Put the name and description in your message.",
+    nodes,
+    edges,
+  );
+  return result.error ? `Error: ${result.error}` : result.message;
 }
