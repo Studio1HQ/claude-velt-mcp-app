@@ -49,7 +49,7 @@ export function TemplatesSidebar() {
   }
 
   return (
-    <aside className="absolute left-16 top-0 h-full w-80 bg-white border-r border-gray-200 shadow-lg z-10 flex flex-col">
+    <aside className="absolute left-0 top-0 h-full w-80 bg-white border-r border-gray-200 shadow-lg z-10 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div>

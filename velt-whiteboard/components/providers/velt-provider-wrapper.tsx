@@ -7,7 +7,7 @@ export function VeltProviderWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const apiKey = process.env.NEXT_PUBLIC_VELT_API_KEY || "hnbXx3OVUnYwsPsmATqe";
+  const apiKey = process.env.NEXT_PUBLIC_VELT_API_KEY || "";
 
   return <VeltProvider apiKey={apiKey}>{children}</VeltProvider>;
 }

@@ -28,7 +28,7 @@ export function ToolTab({
       className={`w-14 h-14 flex items-center justify-center rounded-lg transition-all duration-200 ease-in-out group relative
         ${
           active
-            ? "bg-blue-600 scale-105 shadow-lg"
+            ? "bg-red-400 scale-105 shadow-lg"
             : "hover:bg-gray-700 hover:scale-105"
         }`}
     >

@@ -9,10 +9,12 @@ import {
   Sparkles,
   Pencil,
   LayoutTemplate,
+  MousePointer,
 } from "lucide-react";
 import { useWhiteboardStore, ToolType } from "@/lib/store/whiteboard-store";
 
 const tools: Array<{ id: ToolType; label: string; Icon: any }> = [
+  { id: "select", label: "Select", Icon: MousePointer },
   { id: "sticky", label: "Sticky Notes", Icon: StickyNote },
   { id: "text", label: "Text", Icon: Type },
   { id: "shapes", label: "Shapes", Icon: Circle },
@@ -29,6 +31,8 @@ export function FloatingToolbar() {
     setShapesPanelOpen,
     isTemplatesPanelOpen,
     setTemplatesPanelOpen,
+    isAIPanelOpen,
+    setAIPanelOpen,
     setSelectedShape,
     setSelectedTemplate,
   } = useWhiteboardStore();
@@ -38,7 +42,8 @@ export function FloatingToolbar() {
     if (
       selectedTool === toolId &&
       toolId !== "shapes" &&
-      toolId !== "templates"
+      toolId !== "templates" &&
+      toolId !== "ai"
     ) {
       setSelectedTool(null);
       setSelectedShape(null);
@@ -53,6 +58,9 @@ export function FloatingToolbar() {
     } else if (toolId === "templates") {
       setSelectedTool("templates");
       setTemplatesPanelOpen(true);
+    } else if (toolId === "ai") {
+      setSelectedTool("ai");
+      setAIPanelOpen(true);
     } else {
       setSelectedTool(toolId);
       setSelectedShape(null); // Clear shape selection when switching tools
@@ -61,14 +69,14 @@ export function FloatingToolbar() {
     }
   };
 
-  // Hide floating toolbar when shapes or templates panel is open
-  if (isShapesPanelOpen || isTemplatesPanelOpen) {
+  // Hide floating toolbar when shapes, templates, or AI panel is open
+  if (isShapesPanelOpen || isTemplatesPanelOpen || isAIPanelOpen) {
     return null;
   }
 
   return (
     <aside
-      className="fixed left-4 top-1/4 z-50 w-16 bg-linear-to-b from-gray-800 to-gray-900 rounded-lg shadow-2xl overflow-hidden flex-col items-center py-3 gap-2 border border-gray-700"
+      className="fixed left-4 top-1/6 z-50 w-16 bg-linear-to-b from-gray-800 to-gray-900 rounded-lg shadow-2xl overflow-hidden flex-col items-center py-3 gap-2 border border-gray-700"
       aria-label="whiteboard-tools-sidebar"
     >
       <div className="flex flex-col items-center gap-2">

@@ -24,6 +24,7 @@ import { useWhiteboardStore, ShapeType } from "@/lib/store/whiteboard-store";
 import "@xyflow/react/dist/style.css";
 import Sidebar from "./Sidebar";
 import TemplatesSidebar from "./TemplatesSidebar";
+import AISidebar from "./AISidebar";
 import FloatingToolbar from "./FloatingToolbar";
 import ResizableNode from "./nodes/ResizableNode";
 import ShapeNode from "./nodes/ShapeNode";
@@ -89,6 +90,11 @@ function CollaborativeCanvas() {
     setSelectedTool,
     selectedTemplate,
     setSelectedTemplate,
+    setAIPanelOpen,
+    aiCanvasPosition,
+    setAICanvasPosition,
+    pendingStickyNotes,
+    clearPendingStickyNotes,
   } = useWhiteboardStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
@@ -115,20 +121,21 @@ function CollaborativeCanvas() {
     console.log("📊 Nodes synced:", nodes.length, "nodes");
   }, [nodes]);
 
-  // Handle Escape key to deselect tools
+  // Handle Escape key to deselect tools and close panels
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSelectedTool(null);
         setSelectedShape(null);
         setSelectedTemplate(null);
+        setAIPanelOpen(false);
         console.log("⌨️ Tools deselected via Escape");
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setSelectedTool, setSelectedShape, setSelectedTemplate]);
+  }, [setSelectedTool, setSelectedShape, setSelectedTemplate, setAIPanelOpen]);
 
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
     console.log("🖱️ Double clicked node:", node.id);
@@ -179,6 +186,13 @@ function CollaborativeCanvas() {
   // Handle canvas click for click-to-place mode
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
+      // Update AI canvas position for sticky note placement
+      const clickPosition = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      setAICanvasPosition(clickPosition);
+
       // Handle template placement
       if (selectedTemplate) {
         // Get click position (this will be the top-left anchor point)
@@ -188,18 +202,26 @@ function CollaborativeCanvas() {
         });
 
         // Create all nodes from the template with adjusted positions
-        const templateNodes: Node[] = selectedTemplate.nodes.map((nodeTemplate) => ({
-          ...nodeTemplate,
-          id: getNextNodeId(),
-          position: {
-            x: position.x + (nodeTemplate.position?.x || 0),
-            y: position.y + (nodeTemplate.position?.y || 0),
-          },
-        }));
+        const templateNodes: Node[] = selectedTemplate.nodes.map(
+          (nodeTemplate) => ({
+            ...nodeTemplate,
+            id: getNextNodeId(),
+            position: {
+              x: position.x + (nodeTemplate.position?.x || 0),
+              y: position.y + (nodeTemplate.position?.y || 0),
+            },
+          }),
+        );
 
         // Add all template nodes to canvas
         reactFlowInstance.addNodes(templateNodes);
-        console.log("📋 Placed template:", selectedTemplate.name, "with", templateNodes.length, "nodes");
+        console.log(
+          "📋 Placed template:",
+          selectedTemplate.name,
+          "with",
+          templateNodes.length,
+          "nodes",
+        );
 
         // Clear template selection after placing
         setSelectedTemplate(null);
@@ -291,8 +313,29 @@ function CollaborativeCanvas() {
       setSelectedShape,
       setSelectedTemplate,
       setSelectedTool,
+      setAICanvasPosition,
     ],
   );
+
+  // Handle pending sticky notes from AI
+  useEffect(() => {
+    if (pendingStickyNotes.length > 0) {
+      const newNodes: Node[] = pendingStickyNotes.map((note, index) => ({
+        id: getNextNodeId(),
+        type: "sticky",
+        position: {
+          x: note.position.x + (index % 2) * 220,
+          y: note.position.y + Math.floor(index / 2) * 220,
+        },
+        data: { text: note.text, color: note.color },
+        style: { width: 200, height: 200 },
+      }));
+
+      reactFlowInstance.addNodes(newNodes);
+      clearPendingStickyNotes();
+      console.log("🤖 Added AI sticky notes:", newNodes.length);
+    }
+  }, [pendingStickyNotes, getNextNodeId, reactFlowInstance, clearPendingStickyNotes]);
 
   return (
     <div className="w-full h-full" ref={reactFlowWrapper}>
@@ -309,19 +352,26 @@ function CollaborativeCanvas() {
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
+        // Enable selection mode when select tool is active
+        panOnDrag={selectedTool !== "select"}
+        selectionOnDrag={selectedTool === "select"}
+        panOnScroll={true}
+        multiSelectionKeyCode={selectedTool === "select" ? null : "Control"}
         style={{
           cursor:
-            selectedTemplate ||
-            selectedShape ||
-            selectedTool === "text" ||
-            selectedTool === "sticky"
-              ? "crosshair"
-              : "default",
+            selectedTool === "select"
+              ? "default"
+              : selectedTemplate ||
+                  selectedShape ||
+                  selectedTool === "text" ||
+                  selectedTool === "sticky"
+                ? "crosshair"
+                : "default",
         }}
       >
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Controls />
-        <MiniMap />
+        <MiniMap pannable zoomable />
         <Panel
           position="top-right"
           className="bg-white px-4 py-2 rounded-lg shadow-md"
@@ -334,7 +384,8 @@ function CollaborativeCanvas() {
                 {selectedTool === "text" && "📝 Click to place Text"}
                 {selectedTool === "sticky" && "📌 Click to place Sticky Note"}
                 {selectedShape && `🎨 Click to place ${selectedShape.type}`}
-                {selectedTemplate && `📋 Click to place ${selectedTemplate.name}`}
+                {selectedTemplate &&
+                  `📋 Click to place ${selectedTemplate.name}`}
                 {" · Press ESC to cancel"}
               </p>
             )}
@@ -386,6 +437,8 @@ export function Whiteboard() {
         <Sidebar />
         {/* Templates panel (opens when templates tool is selected) */}
         <TemplatesSidebar />
+        {/* AI panel (opens when AI tool is selected) */}
+        <AISidebar />
       </div>
     </ReactFlowProvider>
   );
