@@ -7,6 +7,8 @@ import {
   Sparkles,
   Send,
   Loader2,
+  ChevronUp,
+  ChevronDown,
   Lightbulb,
   FolderTree,
   FileText,
@@ -49,29 +51,17 @@ const FEATURES = [
     icon: Lightbulb,
     description: "Generate ideas as sticky notes",
   },
-  {
-    id: "organize" as AIFeature,
-    name: "Organize",
-    icon: FolderTree,
-    description: "Group & color-code notes",
-  },
+  // {
+  //   id: "organize" as AIFeature,
+  //   name: "Organize",
+  //   icon: FolderTree,
+  //   description: "Group & color-code notes",
+  // },
   {
     id: "summarize" as AIFeature,
     name: "Summarize",
     icon: FileText,
     description: "Summarize canvas content",
-  },
-  {
-    id: "next-steps" as AIFeature,
-    name: "Next Steps",
-    icon: TrendingUp,
-    description: "Suggest next actions",
-  },
-  {
-    id: "sentiment" as AIFeature,
-    name: "Sentiment",
-    icon: Heart,
-    description: "Color-code by sentiment",
   },
   {
     id: "create-template" as AIFeature,
@@ -105,6 +95,7 @@ export default function AISidebar() {
   } = useWhiteboardStore();
   const { getNodes, getEdges, addNodes, setNodes } = useReactFlow();
   const [selectedFeature, setSelectedFeature] = useState<AIFeature>("chat");
+  const [isGridOpen, setIsGridOpen] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -253,9 +244,9 @@ export default function AISidebar() {
     selectedFeature === "chat" || selectedFeature === "brainstorm";
 
   return (
-    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200">
+    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200 rounded-2xl">
       {/* Header */}
-      <div className="p-4 bg-linear-to-r from-purple-600 to-blue-600 text-white flex items-center justify-between shrink-0">
+      <div className="p-4 bg-linear-to-r from-red-400 to-red-600 text-white flex items-center justify-between shrink-0 rounded-tl-2xl">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5" />
           <h2 className="font-bold text-lg">AI Assistant</h2>
@@ -268,34 +259,58 @@ export default function AISidebar() {
         </button>
       </div>
 
-      {/* Feature Grid */}
-      <div className="p-3 border-b border-gray-200 bg-gray-50 shrink-0">
-        <div className="grid grid-cols-2 gap-1.5">
-          {FEATURES.map(({ id, name, icon: Icon, description }) => (
-            <button
-              key={id}
-              onClick={() => setSelectedFeature(id)}
-              className={`p-2.5 rounded-lg border-2 text-left transition-all ${
-                selectedFeature === id
-                  ? "border-purple-500 bg-purple-50"
-                  : "border-gray-200 bg-white hover:border-purple-300"
-              }`}
-            >
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <Icon
-                  className={`w-3.5 h-3.5 ${selectedFeature === id ? "text-purple-600" : "text-gray-500"}`}
-                />
-                <span
-                  className={`text-xs font-semibold ${selectedFeature === id ? "text-purple-700" : "text-gray-700"}`}
-                >
-                  {name}
-                </span>
-              </div>
-              <p className="text-[10px] text-gray-400 leading-tight">
-                {description}
-              </p>
-            </button>
-          ))}
+      {/* Feature Grid (collapsible; overlays messages when open) */}
+      <div className="p-3 border-b border-gray-200 bg-gray-50 shrink-0 relative">
+        <div className="flex items-start justify-between">
+          <div className="text-sm font-medium text-gray-700">Features</div>
+          <button
+            onClick={() => setIsGridOpen((s) => !s)}
+            aria-expanded={isGridOpen}
+            className="p-1 rounded hover:bg-gray-100 text-gray-600"
+          >
+            {isGridOpen ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        {/* Absolute overlay grid so expanding doesn't push content below */}
+        <div
+          className={`absolute left-3 right-3 top-full mt-2 z-40 bg-gray-50 border border-gray-200 rounded-lg p-3 shadow transition-all duration-150 transform origin-top ${
+            isGridOpen
+              ? "opacity-100 scale-100 visible"
+              : "opacity-0 scale-95 invisible pointer-events-none"
+          }`}
+        >
+          <div className="grid grid-cols-2 gap-1.5">
+            {FEATURES.map(({ id, name, icon: Icon, description }) => (
+              <button
+                key={id}
+                onClick={() => setSelectedFeature(id)}
+                className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                  selectedFeature === id
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-200 bg-white hover:border-red-300"
+                }`}
+              >
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Icon
+                    className={`w-3.5 h-3.5 ${selectedFeature === id ? "text-red-600" : "text-gray-500"}`}
+                  />
+                  <span
+                    className={`text-xs font-semibold ${selectedFeature === id ? "text-red-700" : "text-gray-700"}`}
+                  >
+                    {name}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 leading-tight">
+                  {description}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -317,7 +332,7 @@ export default function AISidebar() {
         ))}
         {isLoading && (
           <div className="flex items-center gap-2 text-gray-500 bg-gray-100 p-3 rounded-lg mr-6">
-            <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+            <Loader2 className="w-4 h-4 animate-spin text-red-400" />
             <span className="text-sm">Thinking...</span>
           </div>
         )}
@@ -325,7 +340,7 @@ export default function AISidebar() {
       </div>
 
       {/* Input / Action */}
-      <div className="p-3 border-t border-gray-200 bg-gray-50 shrink-0">
+      <div className="p-3 border-t border-gray-200 bg-gray-50 shrink-0 rounded-bl-2xl">
         {needsInput ? (
           <div className="flex gap-2">
             <input
@@ -340,13 +355,13 @@ export default function AISidebar() {
                   ? "Enter topic..."
                   : "add 2 sticky notes, add triangle, add kanban..."
               }
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
               disabled={isLoading}
             />
             <button
               onClick={handleFeatureAction}
               disabled={isLoading || !inputValue.trim()}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-40 transition-colors"
+              className="px-3 py-2 bg-linear-to-r from-red-400 to-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40 transition-colors"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -359,7 +374,7 @@ export default function AISidebar() {
           <button
             onClick={handleFeatureAction}
             disabled={isLoading}
-            className="w-full py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-linear-to-r from-red-400 to-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>

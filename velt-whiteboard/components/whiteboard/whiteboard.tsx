@@ -5,6 +5,7 @@ import {
   useEffect,
   DragEvent as ReactDragEvent,
   useRef,
+  useMemo,
 } from "react";
 import {
   ReactFlow,
@@ -17,6 +18,7 @@ import {
   Panel,
   BackgroundVariant,
   useReactFlow,
+  MarkerType,
 } from "@xyflow/react";
 import { useVeltReactFlowCrdtExtension } from "@veltdev/reactflow-crdt";
 import { useVeltInitState } from "@veltdev/react";
@@ -30,6 +32,7 @@ import ResizableNode from "./nodes/ResizableNode";
 import ShapeNode from "./nodes/ShapeNode";
 import TextNode from "./nodes/TextNode";
 import StickyNote from "./nodes/StickyNote";
+import { useTheme } from "next-themes";
 
 // Define custom node types
 const nodeTypes = {
@@ -96,6 +99,7 @@ function CollaborativeCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
   const { screenToFlowPosition } = reactFlowInstance;
+  const { resolvedTheme } = useTheme();
 
   // Initialize CRDT extension
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, store } =
@@ -133,6 +137,17 @@ function CollaborativeCanvas() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setSelectedTool, setSelectedShape, setSelectedTemplate, setAIPanelOpen]);
+
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      style: { strokeWidth: 6, stroke: "grey" },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: "grey",
+      },
+    }),
+    [],
+  );
 
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
     console.log("🖱️ Double clicked node:", node.id);
@@ -347,6 +362,8 @@ function CollaborativeCanvas() {
                 ? "crosshair"
                 : "default",
         }}
+        defaultEdgeOptions={defaultEdgeOptions}
+        colorMode={resolvedTheme === "dark" ? "dark" : "light"}
       >
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Controls />

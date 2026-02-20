@@ -17,16 +17,28 @@ import {
   VeltCommentTool,
   VeltPresence,
 } from "@veltdev/react";
-import { ChevronDown, User as UserIcon } from "lucide-react";
+import { ChevronDown, User as UserIcon, Moon, Sun } from "lucide-react";
 import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function Header() {
   const { currentUser, setCurrentUser } = useWhiteboardStore();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
-    <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
+    <header className="border-b bg-background px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-gray-900">
+        <h1 className="text-xl font-semibold text-foreground">
           Collaborative Whiteboard
         </h1>
       </div>
@@ -34,26 +46,17 @@ export function Header() {
       <div className="flex items-center gap-3">
         {/* Velt Collaboration Tools */}
         <div className="flex items-center gap-2 border-r pr-3">
-          <VeltCommentTool />
-          <VeltSidebarButton />
-          <VeltNotificationsTool />
+          <VeltCommentTool shadowDom={false} />
+          <VeltSidebarButton shadowDom={false} />
+          <VeltNotificationsTool shadowDom={false} />
         </div>
 
         {/* User Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="gap-2">
-              {currentUser.photoUrl ? (
-                <Image
-                  src={currentUser.photoUrl}
-                  alt={currentUser.name}
-                  width={24}
-                  height={24}
-                  className="rounded-full"
-                />
-              ) : (
-                <UserIcon className="h-4 w-4" />
-              )}
+              <UserIcon className="h-4 w-4" />
+              {/* )} */}
               <span>{currentUser.name}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
@@ -67,18 +70,12 @@ export function Header() {
                 onClick={() => setCurrentUser(user)}
                 className="gap-2"
               >
-                {user.photoUrl && (
-                  <Image
-                    src={user.photoUrl}
-                    alt={user.name}
-                    width={20}
-                    height={20}
-                    className="rounded-full"
-                  />
-                )}
+                <UserIcon className="h-4 w-4" />
                 <div className="flex flex-col">
                   <span className="font-medium">{user.name}</span>
-                  <span className="text-xs text-gray-500">{user.email}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {user.email}
+                  </span>
                 </div>
                 {currentUser.userId === user.userId && (
                   <span className="ml-auto text-xs text-green-600">✓</span>
@@ -87,7 +84,23 @@ export function Header() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <VeltPresence />
+
+        {/* Theme Switcher */}
+        {mounted && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleTheme}
+            className="gap-2"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+        <VeltPresence shadowDom={false} />
       </div>
     </header>
   );

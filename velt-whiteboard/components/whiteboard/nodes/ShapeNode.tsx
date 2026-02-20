@@ -206,10 +206,12 @@ function ShapeNode({ data, selected }: NodeProps) {
     <>
       <NodeResizer
         isVisible={!!selected}
-        minWidth={80}
-        minHeight={80}
-        lineClassName="border-blue-500"
-        handleClassName="h-3 w-3 bg-blue-500 rounded-full"
+        minWidth={10}
+        minHeight={10}
+        lineStyle={{
+          borderColor: "#3b82f6",
+          borderWidth: "2px",
+        }}
       />
 
       {/* 4 Handles - All sides as both source and target */}

@@ -49,12 +49,12 @@ export function TemplatesSidebar() {
   }
 
   return (
-    <aside className="absolute left-0 top-0 h-full w-80 bg-white border-r border-gray-200 shadow-lg z-10 flex flex-col">
+    <aside className="absolute left-0 top-0 h-full w-80 bg-background border-r border-gray-200 shadow-lg z-10 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Templates</h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <h2 className="text-lg font-semibold text-foreground">Templates</h2>
+          <p className="text-xs text-muted-foreground mt-1">
             Click to use a pre-built canvas
           </p>
         </div>
@@ -63,13 +63,13 @@ export function TemplatesSidebar() {
           className="p-1 hover:bg-gray-100 rounded transition-colors"
           title="Close Panel"
         >
-          <X className="h-5 w-5 text-gray-600" />
+          <X className="h-5 w-5 text-muted-foreground" />
         </button>
       </div>
 
       {/* Instructions */}
-      <div className="p-4 bg-linear-to-r from-purple-50 to-blue-50 border-b border-purple-100">
-        <p className="text-sm text-purple-900">
+      <div className="p-4 bg-card">
+        <p className="text-sm text-foreground">
           <strong>Click</strong> a template, then{" "}
           <strong>click on canvas</strong> to place it
         </p>
@@ -89,34 +89,34 @@ export function TemplatesSidebar() {
                 onClick={() => handleTemplateClick(template.id)}
                 className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:shadow-lg hover:scale-[1.02] ${
                   isSelected
-                    ? "border-purple-500 bg-purple-50 shadow-md"
-                    : "border-gray-200 bg-white hover:border-purple-300"
+                    ? "border-red-500 bg-card shadow-md"
+                    : "bg-card hover:border-red-300"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div
                     className={`p-2 rounded-lg ${
                       isSelected
-                        ? "bg-purple-500"
-                        : "bg-linear-to-br from-purple-500 to-blue-500"
+                        ? "bg-red-500"
+                        : "bg-linear-to-br from-red-400 to-red-500"
                     }`}
                   >
                     <Icon className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">
+                    <h3 className="font-semibold text-foreground mb-1">
                       {template.name}
                     </h3>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       {template.description}
                     </p>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       {template.nodes.length} elements
                     </p>
                   </div>
                 </div>
                 {isSelected && (
-                  <div className="mt-3 text-xs text-purple-600 font-medium">
+                  <div className="mt-3 text-xs text-red-400 font-medium">
                     ✓ Selected - Click on canvas to place
                   </div>
                 )}
@@ -127,10 +127,10 @@ export function TemplatesSidebar() {
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-gray-200 bg-gray-50">
-        <p className="text-xs text-gray-600 text-center">
+      <div className="p-3 bg-card">
+        <p className="text-xs text-muted-foreground text-center">
           {selectedTemplate ? (
-            <span className="text-purple-600 font-medium">
+            <span className="text-red-400 font-medium">
               Click anywhere on canvas to place template
             </span>
           ) : (

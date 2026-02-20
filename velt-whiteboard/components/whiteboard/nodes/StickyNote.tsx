@@ -4,17 +4,18 @@ import { memo, useState, useRef, useEffect } from "react";
 import {
   Handle,
   Position,
-  NodeResizer,
+  NodeResizeControl,
   NodeProps,
   NodeToolbar,
 } from "@xyflow/react";
+import { ExpandIcon } from "lucide-react";
 
 interface StickyNoteData {
   text?: string;
   color?: string;
 }
 
-const STICKY_COLORS = [
+export const STICKY_COLORS = [
   { name: "Yellow", value: "#fef08a" },
   { name: "Pink", value: "#fbcfe8" },
   { name: "Blue", value: "#bfdbfe" },
@@ -66,13 +67,16 @@ function StickyNote({ data, selected, id }: NodeProps) {
 
   return (
     <>
-      <NodeResizer
-        isVisible={!!selected}
-        minWidth={150}
-        minHeight={150}
-        lineClassName="border-yellow-500"
-        handleClassName="h-3 w-3 bg-yellow-500 rounded-full"
-      />
+      {selected && (
+        <NodeResizeControl
+          minWidth={10}
+          minHeight={10}
+          position="bottom-right"
+          style={{ background: "transparent", border: "none" }}
+        >
+          {/* <ExpandIcon className="h-4 w-4 text-red-400" /> */}
+        </NodeResizeControl>
+      )}
 
       {/* Node Toolbar - Only visible when selected */}
       <NodeToolbar isVisible={!!selected} position={Position.Top}>

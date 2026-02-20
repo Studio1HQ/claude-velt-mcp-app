@@ -20,7 +20,7 @@ const tools: Array<{ id: ToolType; label: string; Icon: any }> = [
   { id: "shapes", label: "Shapes", Icon: Circle },
   { id: "templates", label: "Templates", Icon: LayoutTemplate },
   { id: "ai", label: "AI Assistant", Icon: Sparkles },
-  { id: "draw", label: "Draw/Pen", Icon: Pencil },
+  // { id: "line", label: "Draw/Pen", Icon: Pencil },
 ];
 
 export function FloatingToolbar() {
@@ -70,7 +70,7 @@ export function FloatingToolbar() {
   };
 
   // Hide floating toolbar when shapes, templates, or AI panel is open
-  if (isShapesPanelOpen || isTemplatesPanelOpen || isAIPanelOpen) {
+  if (isShapesPanelOpen || isTemplatesPanelOpen) {
     return null;
   }
 

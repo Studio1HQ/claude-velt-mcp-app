@@ -5,6 +5,7 @@ import {
   VeltPresence,
   VeltComments,
   VeltCommentsSidebar,
+  VeltCursor,
 } from "@veltdev/react";
 import { useWhiteboardStore } from "@/lib/store/whiteboard-store";
 import { useEffect, useState } from "react";
@@ -57,8 +58,9 @@ export function VeltAuthenticator({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* <VeltPresence /> */}
-      <VeltComments />
-      <VeltCommentsSidebar />
+      <VeltComments shadowDom={false} />
+      <VeltCommentsSidebar shadowDom={false} />
+      <VeltCursor />
       {children}
     </>
   );
