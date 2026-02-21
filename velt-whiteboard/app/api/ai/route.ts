@@ -3,9 +3,8 @@ import { NextResponse } from "next/server";
 
 const client = new Anthropic({
   apiKey:
-    process.env.MINIMAX_API_KEY ||
-    "APIKEY",
-  baseURL: "https://api.minimax.io/anthropic",
+    process.env.MINIMAX_API_KEY || "YOUR_API_KEY_HERE",
+    baseURL: "https://api.minimax.io/anthropic",
 });
 
 const CANVAS_SYSTEM_PROMPT = `You are an intelligent AI assistant embedded in a collaborative whiteboard app (like Mural/Miro).
