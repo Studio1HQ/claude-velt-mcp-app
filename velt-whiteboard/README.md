@@ -2,6 +2,9 @@
 
 A real-time collaborative whiteboard application built with **Next.js**, **ReactFlow**, **Zustand**, and **Velt CRDT** for seamless multi-user collaboration.
 
+![Untitled design (47)](https://github.com/user-attachments/assets/b83fa9e2-f815-48f3-ad7f-44713a370fca)
+
+
 > **Built with:** Velt Docs MCP, Velt Skills, ReactFlow, Zustand, VELT CRDT
 
 ## Features
@@ -82,7 +85,7 @@ npm run dev
 
 Open your browser at [http://localhost:3000](http://localhost:3000)
 
-## 🎮 Usage
+## Usage
 
 ### Testing Real-time Collaboration
 
