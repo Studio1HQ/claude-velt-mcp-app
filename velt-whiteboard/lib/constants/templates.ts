@@ -1,4 +1,3 @@
-import { Node } from "@xyflow/react";
 import { TemplateType } from "../store/whiteboard-store";
 
 export const TEMPLATES: TemplateType[] = [
@@ -14,7 +13,7 @@ export const TEMPLATES: TemplateType[] = [
         position: { x: 50, y: 50 },
         data: {
           text: "In what ways might we dramatically improve our offering for different people?",
-          color: "#1f2937",
+          color: "pink",
         },
         style: { width: 200, height: 180 },
       },
@@ -170,7 +169,7 @@ export const TEMPLATES: TemplateType[] = [
         position: { x: 50, y: 50 },
         data: {
           text: "Spark new ideas using well-written 'how might we' questions",
-          color: "#1f2937",
+          color: "pink",
         },
         style: { width: 200, height: 180 },
       },
@@ -421,7 +420,7 @@ export const TEMPLATES: TemplateType[] = [
         position: { x: 50, y: 50 },
         data: {
           text: "💡 Brainstorm Session\n\nTopic: ___________",
-          color: "#1f2937",
+          color: "pink",
         },
         style: { width: 280, height: 150 },
       },
@@ -545,60 +544,86 @@ export const TEMPLATES: TemplateType[] = [
     name: "Feedback Collection",
     description: "Gather and organize user feedback",
     nodes: [
-      // Title
+      // ── Section 1: Positive Feedback (green) ──
       {
         type: "sticky",
-        position: { x: 50, y: 50 },
+        position: { x: 50, y: 60 },
         data: {
-          text: "📣 Feedback Collection\n\nWhat's working? What's not?",
-          color: "#1f2937",
+          text: "😊\n\nPositive\nfeedback",
+          color: "#bbf7d0",
         },
-        style: { width: 280, height: 150 },
+        style: { width: 110, height: 110, borderRadius: "12px" },
       },
-      // Feedback categories
-      {
-        type: "text",
-        position: { x: 380, y: 50 },
-        data: { text: "😊 What's Working Well" },
-        style: {
-          width: 280,
-          height: 80,
-          border: "2px solid #10b981",
-          borderRadius: "8px",
-          backgroundColor: "#d1fae5",
-        },
-      },
-      {
-        type: "text",
-        position: { x: 700, y: 50 },
-        data: { text: "⚠️ What Needs Improvement" },
-        style: {
-          width: 280,
-          height: 80,
-          border: "2px solid #ef4444",
-          borderRadius: "8px",
-          backgroundColor: "#fee2e2",
-        },
-      },
-      {
-        type: "text",
-        position: { x: 1020, y: 50 },
-        data: { text: "💡 New Ideas" },
-        style: {
-          width: 280,
-          height: 80,
-          border: "2px solid #8b5cf6",
-          borderRadius: "8px",
-          backgroundColor: "#f3e8ff",
-        },
-      },
-      // Add feedback sticky notes
-      ...Array.from({ length: 3 }, (_, i) =>
-        Array.from({ length: 4 }, (_, j) => ({
+      ...Array.from({ length: 4 }, (_, col) =>
+        Array.from({ length: 3 }, (_, row) => ({
+          id: `positive-${col}-${row}`,
           type: "sticky",
-          position: { x: 380 + i * 320, y: 160 + j * 150 },
+          position: { x: 180 + col * 130, y: 40 + row * 120 },
+          data: { text: "", color: "#bbf7d0" },
+          style: { width: 110, height: 100, borderRadius: "10px" },
+        })),
+      ).flat(),
+
+      // ── Section 2: Negative Feedback (pink/red) ──
+      {
+        id: "label-negative",
+        type: "sticky",
+        position: { x: 50, y: 420 },
+        data: {
+          text: "😞\n\nNegative\nfeedback",
+          color: "#fecaca",
+        },
+        style: { width: 110, height: 110, borderRadius: "12px" },
+      },
+      ...Array.from({ length: 4 }, (_, col) =>
+        Array.from({ length: 3 }, (_, row) => ({
+          id: `negative-${col}-${row}`,
+          type: "sticky",
+          position: { x: 180 + col * 130, y: 400 + row * 120 },
+          data: { text: "", color: "#fecaca" },
+          style: { width: 110, height: 100, borderRadius: "10px" },
+        })),
+      ).flat(),
+
+      // ── Section 3: Ideas (yellow) ──
+      {
+        id: "label-ideas",
+        type: "sticky",
+        position: { x: 50, y: 780 },
+        data: {
+          text: "💡\n\nIdeas\nyou have",
+          color: "#fef08a",
+        },
+        style: { width: 110, height: 110, borderRadius: "12px" },
+      },
+      ...Array.from({ length: 4 }, (_, col) =>
+        Array.from({ length: 3 }, (_, row) => ({
+          id: `ideas-${col}-${row}`,
+          type: "sticky",
+          position: { x: 180 + col * 130, y: 760 + row * 120 },
           data: { text: "", color: "#fef08a" },
-          style: { width: 250, height: 120 },
+          style: { width: 110, height: 100, borderRadius: "10px" },
+        })),
+      ).flat(),
+
+      // ── Section 4: Questions (blue) ──
+      {
+        id: "label-questions",
+        type: "sticky",
+        position: { x: 50, y: 1140 },
+        data: {
+          text: "❓\n\nQuestions\nyou have",
+          color: "#bae6fd",
+        },
+        style: { width: 110, height: 110, borderRadius: "12px" },
+      },
+      ...Array.from({ length: 4 }, (_, col) =>
+        Array.from({ length: 3 }, (_, row) => ({
+          id: `questions-${col}-${row}`,
+          type: "sticky",
+          position: { x: 180 + col * 130, y: 1120 + row * 120 },
+          data: { text: "", color: "#bae6fd" },
+          style: { width: 110, height: 100, borderRadius: "10px" },
         })),
       ).flat(),
     ],
