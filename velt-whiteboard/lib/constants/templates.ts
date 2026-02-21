@@ -547,12 +547,12 @@ export const TEMPLATES: TemplateType[] = [
       // ── Section 1: Positive Feedback (green) ──
       {
         type: "sticky",
-        position: { x: 50, y: 60 },
+        position: { x: -140, y: 60 },
         data: {
           text: "😊\n\nPositive\nfeedback",
           color: "#bbf7d0",
         },
-        style: { width: 110, height: 110, borderRadius: "12px" },
+        style: { width: 310, height: 210, borderRadius: "12px" },
       },
       ...Array.from({ length: 4 }, (_, col) =>
         Array.from({ length: 3 }, (_, row) => ({
@@ -568,12 +568,12 @@ export const TEMPLATES: TemplateType[] = [
       {
         id: "label-negative",
         type: "sticky",
-        position: { x: 50, y: 420 },
+        position: { x: -140, y: 420 },
         data: {
           text: "😞\n\nNegative\nfeedback",
           color: "#fecaca",
         },
-        style: { width: 110, height: 110, borderRadius: "12px" },
+        style: { width: 310, height: 210, borderRadius: "12px" },
       },
       ...Array.from({ length: 4 }, (_, col) =>
         Array.from({ length: 3 }, (_, row) => ({
@@ -589,12 +589,12 @@ export const TEMPLATES: TemplateType[] = [
       {
         id: "label-ideas",
         type: "sticky",
-        position: { x: 50, y: 780 },
+        position: { x: -140, y: 780 },
         data: {
           text: "💡\n\nIdeas\nyou have",
           color: "#fef08a",
         },
-        style: { width: 110, height: 110, borderRadius: "12px" },
+        style: { width: 310, height: 210, borderRadius: "12px" },
       },
       ...Array.from({ length: 4 }, (_, col) =>
         Array.from({ length: 3 }, (_, row) => ({
@@ -610,12 +610,12 @@ export const TEMPLATES: TemplateType[] = [
       {
         id: "label-questions",
         type: "sticky",
-        position: { x: 50, y: 1140 },
+        position: { x: -140, y: 1140 },
         data: {
           text: "❓\n\nQuestions\nyou have",
           color: "#bae6fd",
         },
-        style: { width: 110, height: 110, borderRadius: "12px" },
+        style: { width: 310, height: 210, borderRadius: "12px" },
       },
       ...Array.from({ length: 4 }, (_, col) =>
         Array.from({ length: 3 }, (_, row) => ({
