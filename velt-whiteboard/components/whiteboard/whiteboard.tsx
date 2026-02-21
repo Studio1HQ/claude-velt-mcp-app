@@ -33,6 +33,7 @@ import ShapeNode from "./nodes/ShapeNode";
 import TextNode from "./nodes/TextNode";
 import StickyNote from "./nodes/StickyNote";
 import { useTheme } from "next-themes";
+import { NodeSyncProvider } from "./NodeSyncContext";
 
 // Define custom node types
 const nodeTypes = {
@@ -140,7 +141,7 @@ function CollaborativeCanvas() {
 
   const defaultEdgeOptions = useMemo(
     () => ({
-      style: { strokeWidth: 6, stroke: "grey" },
+      style: { strokeWidth: 3, stroke: "grey" },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: "grey",
@@ -282,7 +283,7 @@ function CollaborativeCanvas() {
           id: getNextNodeId(),
           type: "text",
           position,
-          data: { text: "" },
+          data: { text: "", onNodesChange },
           style: { width: 200, height: 100 },
         };
 
@@ -304,7 +305,7 @@ function CollaborativeCanvas() {
           id: getNextNodeId(),
           type: "sticky",
           position,
-          data: { text: "", color: "#fef08a" },
+          data: { text: "", color: "#fef08a", onNodesChange },
           style: { width: 200, height: 200 },
         };
 
@@ -332,63 +333,65 @@ function CollaborativeCanvas() {
   // Handle pending sticky notes from AI — removed, AISidebar now uses addNodes directly
 
   return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeDoubleClick={onNodeDoubleClick}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onPaneClick={onPaneClick}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-        // Enable selection mode when select tool is active
-        panOnDrag={selectedTool !== "select"}
-        selectionOnDrag={selectedTool === "select"}
-        panOnScroll={true}
-        multiSelectionKeyCode={selectedTool === "select" ? null : "Control"}
-        style={{
-          cursor:
-            selectedTool === "select"
-              ? "default"
-              : selectedTemplate ||
-                  selectedShape ||
-                  selectedTool === "text" ||
-                  selectedTool === "sticky"
-                ? "crosshair"
-                : "default",
-        }}
-        defaultEdgeOptions={defaultEdgeOptions}
-        colorMode={resolvedTheme === "dark" ? "dark" : "light"}
-      >
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        <Controls />
-        <MiniMap pannable zoomable />
-        <Panel
-          position="top-right"
-          className="bg-white px-4 py-2 rounded-lg shadow-md"
+    <NodeSyncProvider onNodesChange={onNodesChange}>
+      <div className="w-full h-full" ref={reactFlowWrapper}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeDoubleClick={onNodeDoubleClick}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onPaneClick={onPaneClick}
+          nodeTypes={nodeTypes}
+          fitView
+          attributionPosition="bottom-left"
+          // Enable selection mode when select tool is active
+          panOnDrag={selectedTool !== "select"}
+          selectionOnDrag={selectedTool === "select"}
+          panOnScroll={true}
+          multiSelectionKeyCode={selectedTool === "select" ? null : "Control"}
+          style={{
+            cursor:
+              selectedTool === "select"
+                ? "default"
+                : selectedTemplate ||
+                    selectedShape ||
+                    selectedTool === "text" ||
+                    selectedTool === "sticky"
+                  ? "crosshair"
+                  : "default",
+          }}
+          defaultEdgeOptions={defaultEdgeOptions}
+          colorMode={resolvedTheme === "dark" ? "dark" : "light"}
         >
-          <div className="text-sm text-gray-600">
-            <p className="font-semibold">✨ {currentUser.name} Connected</p>
-            <p className="text-xs mt-1">Real-time CRDT sync active</p>
-            {(selectedTool || selectedShape || selectedTemplate) && (
-              <p className="text-xs mt-1 text-blue-600 font-medium">
-                {selectedTool === "text" && "📝 Click to place Text"}
-                {selectedTool === "sticky" && "📌 Click to place Sticky Note"}
-                {selectedShape && `🎨 Click to place ${selectedShape.type}`}
-                {selectedTemplate &&
-                  `📋 Click to place ${selectedTemplate.name}`}
-                {" · Press ESC to cancel"}
-              </p>
-            )}
-          </div>
-        </Panel>
-      </ReactFlow>
-    </div>
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+          <Controls />
+          <MiniMap pannable zoomable />
+          <Panel
+            position="top-right"
+            className="bg-white px-4 py-2 rounded-lg shadow-md"
+          >
+            <div className="text-sm text-gray-600">
+              <p className="font-semibold">✨ {currentUser.name} Connected</p>
+              <p className="text-xs mt-1">Real-time CRDT sync active</p>
+              {(selectedTool || selectedShape || selectedTemplate) && (
+                <p className="text-xs mt-1 text-blue-600 font-medium">
+                  {selectedTool === "text" && "📝 Click to place Text"}
+                  {selectedTool === "sticky" && "📌 Click to place Sticky Note"}
+                  {selectedShape && `🎨 Click to place ${selectedShape.type}`}
+                  {selectedTemplate &&
+                    `📋 Click to place ${selectedTemplate.name}`}
+                  {" · Press ESC to cancel"}
+                </p>
+              )}
+            </div>
+          </Panel>
+        </ReactFlow>
+      </div>
+    </NodeSyncProvider>
   );
 }
 

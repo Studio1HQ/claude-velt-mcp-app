@@ -11,18 +11,31 @@ import {
 } from "@xyflow/react";
 import { ExpandIcon } from "lucide-react";
 import { STICKY_COLORS } from "./StickyNote";
+import { useNodeSync } from "../NodeSyncContext";
 interface TextNodeData {
   text?: string;
   color?: string;
+  onNodesChange?: (changes: any[]) => void;
 }
 
 function TextNode({ data, selected, id }: NodeProps) {
   const nodeData = data as TextNodeData;
   const [text, setText] = useState(nodeData?.text || "");
-  const [color, setColor] = useState("");
+  const [color, setColor] = useState(nodeData?.color || "");
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reactFlow = useReactFlow();
+  const { onNodesChange } = useNodeSync();
+
+  // Sync with external data changes (from CRDT)
+  useEffect(() => {
+    if (nodeData?.text !== undefined && nodeData.text !== text) {
+      setText(nodeData.text);
+    }
+    if (nodeData?.color !== undefined && nodeData.color !== color) {
+      setColor(nodeData.color);
+    }
+  }, [nodeData?.text, nodeData?.color]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
@@ -37,8 +50,13 @@ function TextNode({ data, selected, id }: NodeProps) {
 
   const handleBlur = () => {
     setIsEditing(false);
+    // Update node data and trigger CRDT sync
     if (nodeData) {
       nodeData.text = text;
+      // Trigger CRDT sync through ReactFlow's onNodesChange
+      if (onNodesChange) {
+        onNodesChange([{ type: "select", id, selected: true }]);
+      }
     }
   };
 
@@ -46,6 +64,10 @@ function TextNode({ data, selected, id }: NodeProps) {
     setColor(newColor);
     if (nodeData) {
       nodeData.color = newColor;
+      // Trigger CRDT sync through ReactFlow's onNodesChange
+      if (onNodesChange) {
+        onNodesChange([{ type: "select", id, selected: true }]);
+      }
     }
   };
 
@@ -164,7 +186,16 @@ function TextNode({ data, selected, id }: NodeProps) {
           <textarea
             ref={textareaRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              if (nodeData) {
+                nodeData.text = e.target.value;
+                // Trigger CRDT sync
+                if (onNodesChange) {
+                  onNodesChange([{ type: "select", id, selected: true }]);
+                }
+              }
+            }}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             className="w-full h-full resize-none border-none outline-none text-sm font-normal text-gray-900 bg-transparent"
