@@ -9,11 +9,13 @@ import {
 } from "@veltdev/react";
 import { useWhiteboardStore } from "@/lib/store/whiteboard-store";
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 
 export function VeltAuthenticator({ children }: { children: React.ReactNode }) {
   const { client } = useVeltClient();
   const { currentUser, documentId } = useWhiteboardStore();
   const [isUserIdentified, setIsUserIdentified] = useState(false);
+  const { theme } = useTheme();
 
   // Identify user when client or currentUser changes
   useEffect(() => {
@@ -36,6 +38,9 @@ export function VeltAuthenticator({ children }: { children: React.ReactNode }) {
 
           setIsUserIdentified(true);
           console.log("✅ User identified successfully:", currentUser.name);
+          await client.setDarkMode(theme === "dark");
+          const commentElement = client.getCommentElement();
+          commentElement.allowedElementIds(['canvas-area']);
         } catch (error) {
           console.error("❌ Error identifying user:", error);
           setIsUserIdentified(false);
@@ -44,7 +49,7 @@ export function VeltAuthenticator({ children }: { children: React.ReactNode }) {
     };
 
     identifyUser();
-  }, [client, currentUser]);
+  }, [client, currentUser, theme]);
 
   // Set document after user is identified
   useEffect(() => {

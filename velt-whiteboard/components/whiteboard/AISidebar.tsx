@@ -251,29 +251,29 @@ export default function AISidebar() {
     selectedFeature === "chat" || selectedFeature === "brainstorm";
 
   return (
-    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200 rounded-2xl">
+    <div className="absolute top-0 right-0 h-full w-96 bg-background shadow-2xl z-50 flex flex-col rounded-2xl">
       {/* Header */}
-      <div className="p-4 bg-linear-to-r from-red-400 to-red-600 text-white flex items-center justify-between shrink-0 rounded-tl-2xl">
+      <div className="p-4 bg-linear-to-r from-red-400 to-red-600 text-background flex items-center justify-between shrink-0 rounded-tl-2xl">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5" />
           <h2 className="font-bold text-lg">AI Assistant</h2>
         </div>
         <button
           onClick={() => setAIPanelOpen(false)}
-          className="p-1 hover:bg-white/20 rounded transition-colors"
+          className="p-1 rounded transition-colors text-background cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Feature Grid (collapsible; overlays messages when open) */}
-      <div className="p-3 border-b border-gray-200 bg-gray-50 shrink-0 relative">
+      <div className="p-3 border-b border-foreground bg-background shrink-0 relative">
         <div className="flex items-start justify-between">
-          <div className="text-sm font-medium text-gray-700">Features</div>
+          <div className="text-sm font-medium text-foreground">Features</div>
           <button
             onClick={() => setIsGridOpen((s) => !s)}
             aria-expanded={isGridOpen}
-            className="p-1 rounded hover:bg-gray-100 text-gray-600"
+            className="p-1 rounded hover:bg-red-500 text-foregorund"
           >
             {isGridOpen ? (
               <ChevronUp className="w-4 h-4" />
@@ -285,7 +285,7 @@ export default function AISidebar() {
 
         {/* Absolute overlay grid so expanding doesn't push content below */}
         <div
-          className={`absolute left-3 right-3 top-full mt-2 z-40 bg-gray-50 border border-gray-200 rounded-lg p-3 shadow transition-all duration-150 transform origin-top ${
+          className={`absolute left-3 right-3 top-full mt-2 z-40 bg-muted rounded-lg p-3 shadow transition-all duration-150 transform origin-top ${
             isGridOpen
               ? "opacity-100 scale-100 visible"
               : "opacity-0 scale-95 invisible pointer-events-none"
@@ -298,16 +298,16 @@ export default function AISidebar() {
                 onClick={() => setSelectedFeature(id)}
                 className={`p-2.5 rounded-lg border-2 text-left transition-all ${
                   selectedFeature === id
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-200 bg-white hover:border-red-300"
+                    ? "border-red-500 bg-card"
+                    : "border-gray-200 bg-card hover:border-red-300"
                 }`}
               >
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <Icon
-                    className={`w-3.5 h-3.5 ${selectedFeature === id ? "text-red-600" : "text-gray-500"}`}
+                    className={`w-3.5 h-3.5 ${selectedFeature === id ? "text-red-500" : "text-foreground"}`}
                   />
                   <span
-                    className={`text-xs font-semibold ${selectedFeature === id ? "text-red-700" : "text-gray-700"}`}
+                    className={`text-xs font-semibold ${selectedFeature === id ? "text-red-500" : "text-foreground"}`}
                   >
                     {name}
                   </span>
@@ -338,7 +338,7 @@ export default function AISidebar() {
           <ChatMessage key={msg.id} role={msg.role} content={msg.content} />
         ))}
         {isLoading && (
-          <div className="flex items-center gap-2 text-gray-500 bg-gray-100 p-3 rounded-lg mr-6">
+          <div className="flex items-center gap-2 text-foreground bg-card p-3 rounded-lg mr-6">
             <Loader2 className="w-4 h-4 animate-spin text-red-400" />
             <span className="text-sm">Thinking...</span>
           </div>
@@ -347,7 +347,7 @@ export default function AISidebar() {
       </div>
 
       {/* Input / Action */}
-      <div className="p-3 border-t border-gray-200 bg-gray-50 shrink-0 rounded-bl-2xl">
+      <div className="p-3 bg-card shrink-0 rounded-bl-2xl">
         {needsInput ? (
           <div className="flex gap-2">
             <input
@@ -362,7 +362,7 @@ export default function AISidebar() {
                   ? "Enter topic..."
                   : "add 2 sticky notes, add triangle, add kanban..."
               }
-              className="flex-1 px-3 py-2 text-foreground text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="flex-1 px-3 py-2 text-foreground text-sm rounded-lg border-2 border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400"
               disabled={isLoading}
             />
             <button

@@ -334,7 +334,7 @@ function CollaborativeCanvas() {
 
   return (
     <NodeSyncProvider onNodesChange={onNodesChange}>
-      <div className="w-full h-full" ref={reactFlowWrapper}>
+      <div className="w-full h-full" ref={reactFlowWrapper} id="canvas-area">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -372,9 +372,9 @@ function CollaborativeCanvas() {
           <MiniMap pannable zoomable />
           <Panel
             position="top-right"
-            className="bg-white px-4 py-2 rounded-lg shadow-md"
+            className="bg-muted px-4 py-2 rounded-lg shadow-md"
           >
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-foreground">
               <p className="font-semibold">✨ {currentUser.name} Connected</p>
               <p className="text-xs mt-1">Real-time CRDT sync active</p>
               {(selectedTool || selectedShape || selectedTemplate) && (
@@ -397,11 +397,11 @@ function CollaborativeCanvas() {
 
 function LoadingScreen() {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gray-50">
+    <div className="w-full h-full flex items-center justify-center bg-background">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-700 font-medium">Initializing Velt...</p>
-        <p className="text-gray-500 text-sm mt-2">
+        <p className="text-foreground font-medium">Initializing Velt...</p>
+        <p className="text-foreground text-sm mt-2">
           Setting up real-time collaboration
         </p>
       </div>
